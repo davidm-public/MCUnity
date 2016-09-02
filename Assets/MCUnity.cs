@@ -46,10 +46,19 @@ public class MCUnity : MonoBehaviour
     public UdpClient UDP_Socket;            // our UDP socket, basically the entry point into the .NET UDP/IP stack
     public int My_Port = 55555;             // our UDP port, set to an arbitrary value that's easy to type, because laziness
 
+    // public IPAddress Local_IP_Address;      // This app's IP address
+    public IPAddress MCU_IP_Address;        // MCU IP address
+    public string MCU_IP_Addr;
+
     // TO DO : REPLACE WITH A MESSAGE CONSISTENT WITH THE PROJECT SPECIFICATIONS
     // I can also try a packet containing various data types to test the ESP's packet parsing functions.
     //public string Broadcast_Message;        // the message this PC will broadcast over the LAN (string)
     public byte[] Broadcast_Payload;        // the same message, converted into a packet payload (byte array)
+
+    /*********************************************************************************************************
+    START METHOD
+
+    **********************************************************************************************************/
 
     // Initialize the script and start the networking threads
     void Start()
@@ -69,6 +78,11 @@ public class MCUnity : MonoBehaviour
         byte[] Bytes = IPAddress.Parse(My_IP_Address).GetAddressBytes();                // use of a static class method
         My_Broadcast_Address = Bytes[0] + "." + Bytes[1] + "." + Bytes[2] + "." + 255;  // host 255 is for broadcasting
 
+        MCU_IP_Addr = "";
+
+        // Initialize remote variables storage
+        int_variables_init();
+
         // this thread will run at very low speed, to do one broadcast every 100 ms
         Broadcast_Thread = new Thread(new ThreadStart(Broadcaster));
         Broadcast_Thread.IsBackground = true;
@@ -80,15 +94,20 @@ public class MCUnity : MonoBehaviour
         Receive_Thread.Start();
     }
 
+    /*********************************************************************************************************
+    GUI
+
+    **********************************************************************************************************/
+
     // Display the local IP address, the list of all machines on the LAN that run this application, and a refresh button
     void OnGUI()
     {
-        GUI.Box(new Rect(0, 0, Screen.width, Style.fontSize), "Local IP : " + My_IP_Address, Style);
+        GUI.Box(new Rect(0, 0, Screen.width, Style.fontSize), "MCU IP : " + MCU_IP_Addr, Style);
 
-        if (GUI.Button(new Rect(0, 2 * Style.fontSize, Screen.width, Style.fontSize * 2), "Refresh"))
-            Display_Buffer = "";        // refresh simply empties the display buffer
+        //if (GUI.Button(new Rect(0, 2 * Style.fontSize, Screen.width, Style.fontSize * 2), "Refresh"))
+        //    Display_Buffer = "";        // refresh simply empties the display buffer
 
-        GUI.Box(new Rect(0, 4 * Style.fontSize, Screen.width, Style.fontSize), Display_Buffer, Style);
+        // GUI.Box(new Rect(0, 4 * Style.fontSize, Screen.width, Style.fontSize), Display_Buffer, Style);
     }
 
     // This method is called when the script exits, which (in this application) coincides with the application ending
@@ -103,10 +122,14 @@ public class MCUnity : MonoBehaviour
         while (Keep_Running)
         {
             UDP_Socket.Send(Broadcast_Payload, Broadcast_Payload.Length, My_Broadcast_Address, My_Port);
-            //Thread.Sleep(100);      // wait 100 ms until next broadcast, so the network isn't saturated
             Thread.Sleep(1000);      // wait 1000 ms until next broadcast, so the network isn't saturated
         }
     }
+
+    /*********************************************************************************************************
+    PACKET RECEIVER THREAD - CALLS INDIVIDUAL PARSERS
+
+    **********************************************************************************************************/
 
     // The nice thing about threads is you can use as many as you need (well, as long as you've got RAM for them)
     private void Receiver()
@@ -117,6 +140,13 @@ public class MCUnity : MonoBehaviour
             {
                 IPEndPoint receiveEP = new IPEndPoint(IPAddress.Any, My_Port);    // listen for any IP, on port 55555
                 byte[] data = UDP_Socket.Receive(ref receiveEP);     // EP as reference because it'll be populated with remote sender IP and port
+
+                // Store the source address of the incoming packet as the MCU's IP address.
+                if (receiveEP.Address.ToString() != My_IP_Address)  // ignore the broadcast message carrying the local IP
+                {
+                    MCU_IP_Address = receiveEP.Address;
+                    MCU_IP_Addr = MCU_IP_Address.ToString();
+                }
 
                 // We've got a packet payload form the ESP8266 in the "data" array : call the relevant parser by type
                 switch (data[0])
@@ -133,18 +163,40 @@ public class MCUnity : MonoBehaviour
         }
     }
 
+    /*********************************************************************************************************
+    INTEGER VARIABLES OPERATIONS AND RELATED CODE
+
+    **********************************************************************************************************/
+
+    // "int" variables parameter storage
+    private int[] int_variable_value;
+    private int[] int_variable_min_val;
+    private int[] int_variable_max_val;
+    private uint[] int_variable_flags;
+    private string[] int_variable_name;
+    private int int_variable_occupancy;      // how many "int" variables have been setup ?
+
+    private void int_variables_init()
+    {
+        int_variable_value = new int[256];      // maximum 256 remote variables of type int
+        int_variable_min_val = new int[256];
+        int_variable_max_val = new int[256];
+        int_variable_flags = new uint[256];
+        int_variable_name = new string[256];
+        int_variable_occupancy = 0;     // note : zeroing this value amounts to clearing int variable storage
+    }
+
     // UNITY_TX_SETUP_INT
     private void parse_setup_int (byte[] data)
     {
-        string text = "setup int " + data[1]; // data[1] is the common index the ESP8266 and Unity will share to identify the same variable without using its name
+        // A setup function first needs to store the parameters sent by the MCU
+        // note : the MCU transmits the index, but in reality this is redundant
 
         // Converting bytes to int (this matches the endianness of the ESP8266)
-        int i1 = (data[2] << 24) | (data[3] << 16) | (data[4] << 8) | data[5];
-        int i2 = (data[6] << 24) | (data[7] << 16) | (data[8] << 8) | data[9];
-        int i3 = (data[10] << 24) | (data[11] << 16) | (data[12] << 8) | data[13];
-        int i4 = (data[14] << 24) | (data[15] << 16) | (data[16] << 8) | data[17];
-
-        text += " / " + i1 + " / " + i2 + " / " + i3 + " / " + i4;  // compile this string for debug purposes / logging
+        int_variable_value[int_variable_occupancy] = (data[2] << 24) | (data[3] << 16) | (data[4] << 8) | data[5];
+        int_variable_min_val[int_variable_occupancy] = (data[6] << 24) | (data[7] << 16) | (data[8] << 8) | data[9];
+        int_variable_max_val[int_variable_occupancy] = (data[10] << 24) | (data[11] << 16) | (data[12] << 8) | data[13];
+        int_variable_flags[int_variable_occupancy] = (uint)((data[14] << 24) | (data[15] << 16) | (data[16] << 8) | data[17]);
 
         // extract the variable-length part at the end of a packet 
         byte[] str = new byte[data.Length - 18];
@@ -155,10 +207,21 @@ public class MCUnity : MonoBehaviour
             i++;
         }
 
-        text += " / " + Encoding.UTF8.GetString(str);   // convert the variable length part into a string
+        // store it as the variable's display name
+        int_variable_name[int_variable_occupancy] = Encoding.UTF8.GetString(str);   // convert the variable length part into a string
 
-        if (!Display_Buffer.Contains(text))     // log incoming packets for displaying, but only if they belong to a machine that hasn't been heard from before.
-            Display_Buffer += "\n" + text;
+        // Build a log string
+        string text = "setup int " + data[1]; // data[1] is the common index the ESP8266 and Unity will share to identify the same variable without using its name    
+        int i1 = int_variable_value[int_variable_occupancy];
+        int i2 = int_variable_min_val[int_variable_occupancy];
+        int i3 = int_variable_max_val[int_variable_occupancy];
+        uint i4 = int_variable_flags[int_variable_occupancy];
+        text += " / " + i1 + " / " + i2 + " / " + i3 + " / " + i4;    
+        text += " / " + int_variable_name[int_variable_occupancy];
+        print(text);    // log the packet
+
+        // update "occupancy" (max. index)
+        int_variable_occupancy++;
     }
 }
 
