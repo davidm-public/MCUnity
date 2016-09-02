@@ -97,24 +97,51 @@ public class MCUnity : MonoBehaviour
     /*********************************************************************************************************
     GUI
 
+    TO DO :
+
+        *   display "int" variables as GUI.Box objects
+
     **********************************************************************************************************/
 
     // Display the local IP address, the list of all machines on the LAN that run this application, and a refresh button
     void OnGUI()
     {
-        GUI.Box(new Rect(0, 0, Screen.width, Style.fontSize), "MCU IP : " + MCU_IP_Addr, Style);
+        int line = 0;
+
+        GUI.Box(new Rect(0, line, Screen.width, Style.fontSize), "MCU IP : " + MCU_IP_Addr, Style);
+        line += Style.fontSize * 2;
 
         //if (GUI.Button(new Rect(0, 2 * Style.fontSize, Screen.width, Style.fontSize * 2), "Refresh"))
         //    Display_Buffer = "";        // refresh simply empties the display buffer
 
         // GUI.Box(new Rect(0, 4 * Style.fontSize, Screen.width, Style.fontSize), Display_Buffer, Style);
+
+        // Generate GUI controls for the "int" type variables
+        int k;
+        for (k = 0; k < int_variable_occupancy; k++)
+        {
+            GUI.Box(new Rect(0, line, Screen.width, Style.fontSize), int_variable_name[k], Style);
+            line += Style.fontSize;
+            GUI.Box(new Rect(0, line, Screen.width, Style.fontSize), int_variable_value[k].ToString(), Style);
+            line += Style.fontSize * 2;
+        }
     }
+
+    /*********************************************************************************************************
+    DESTRUCTOR
+
+    **********************************************************************************************************/
 
     // This method is called when the script exits, which (in this application) coincides with the application ending
     void OnDestroy()
     {
         Keep_Running = false;    // this is vital : it ensures the threads die when the application ends 
     }
+
+    /*********************************************************************************************************
+    BROADCASTER THREAD, LETTING MCU'S KNOW THE APP IS LIVE AND WHAT IP ADDRESS IT IS AT
+
+    **********************************************************************************************************/
 
     // The broadcast thread is just another method of this class
     private void Broadcaster()
@@ -151,7 +178,7 @@ public class MCUnity : MonoBehaviour
                 // We've got a packet payload form the ESP8266 in the "data" array : call the relevant parser by type
                 switch (data[0])
                 {
-                    case 0x02:         // UNITY_TX_SETUP_INT : setup GUI element for an "int" type variable (32-bit signed)
+                    case 0x04:         // UNITY_TX_SETUP_INT : setup GUI element for an "int" type variable (32-bit signed)
                         parse_setup_int(data);
                         break;
                     default:
