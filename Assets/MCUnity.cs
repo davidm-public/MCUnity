@@ -178,8 +178,11 @@ public class MCUnity : MonoBehaviour
                 // We've got a packet payload form the ESP8266 in the "data" array : call the relevant parser by type
                 switch (data[0])
                 {
-                    case 0x04:         // UNITY_TX_SETUP_INT : setup GUI element for an "int" type variable (32-bit signed)
+                    case 0x04:          // UNITY_TX_SETUP_INT : setup GUI element for an "int" type variable (32-bit signed)
                         parse_setup_int(data);
+                        break;
+                    case 0x06:          // UNITY_TX_UPDATE_INT : update the value of "int" type variable(s)
+                        parse_update_int(data);
                         break;
                     default:
                         break;
@@ -214,7 +217,7 @@ public class MCUnity : MonoBehaviour
     }
 
     // UNITY_TX_SETUP_INT
-    private void parse_setup_int (byte[] data)
+    private void parse_setup_int(byte[] data)
     {
         // A setup function first needs to store the parameters sent by the MCU
         // note : the MCU transmits the index, but in reality this is redundant
@@ -243,12 +246,36 @@ public class MCUnity : MonoBehaviour
         int i2 = int_variable_min_val[int_variable_occupancy];
         int i3 = int_variable_max_val[int_variable_occupancy];
         uint i4 = int_variable_flags[int_variable_occupancy];
-        text += " / " + i1 + " / " + i2 + " / " + i3 + " / " + i4;    
+        text += " / " + i1 + " / " + i2 + " / " + i3 + " / " + i4;
         text += " / " + int_variable_name[int_variable_occupancy];
         print(text);    // log the packet
 
         // update "occupancy" (max. index)
         int_variable_occupancy++;
     }
+
+    // UNITY_TX_UPDATE_INT
+    private void parse_update_int(byte[] data)
+    {
+        // initialize log string
+        string log = "update (int) from offset ";
+        // get the index for the first variable contained in the packet
+        int offset = (int)data[1];  // data[0] is the packet's command byte, we've already decoded that, which is how we got here
+        log += offset + " : ";
+        // compute how many variables are contained in the packet
+        int length = data.GetLength(0) - 2;     // how many bytes in the packet, exclusing command and offset bytes ?
+        length = length / 4;          // Now divide by 4 bytes to get the number of "int" values
+        // get those values from packet to variables:
+        int j,k;        // j is the variable index, k is the 
+        for (j=0, k = 2; j < length; j++, k+=4) 
+        {
+            int value = (data[k] << 24) | (data[k + 1] << 16) | (data[k + 2] << 8) | data[k + 3];
+            int_variable_value[j + offset] = value;
+            log += value + "  ";
+        }
+        // log
+        print(log);
+    }
+
 }
 
