@@ -82,6 +82,7 @@ public class MCUnity : MonoBehaviour
 
         // Initialize remote variables storage
         int_variables_init();
+        firmware_function_init();
 
         // this thread will run at very low speed, to do one broadcast every 100 ms
         Broadcast_Thread = new Thread(new ThreadStart(Broadcaster));
@@ -99,7 +100,8 @@ public class MCUnity : MonoBehaviour
 
     TO DO :
 
-        *   display "int" variables as GUI.Box objects
+        *   this guy offers very limited layout customization options
+        *   start implementing "tile" concept for GUI elements
 
     **********************************************************************************************************/
 
@@ -108,7 +110,12 @@ public class MCUnity : MonoBehaviour
     {
         int line = 0;
 
-        GUI.Box(new Rect(0, line, Screen.width, Style.fontSize), "MCU IP : " + MCU_IP_Addr, Style);
+        GUI.Box(new Rect(0, line, Screen.width / 2, Style.fontSize), "MCU IP : " + MCU_IP_Addr, Style);
+
+        // button to request the MCU perform its MCUnity setup operations sequence again
+        if (GUI.Button(new Rect(Screen.width / 2, line, Screen.width / 2, Style.fontSize), "Force Setup"))
+            force_setup();
+
         line += Style.fontSize * 2;
 
         //if (GUI.Button(new Rect(0, 2 * Style.fontSize, Screen.width, Style.fontSize * 2), "Refresh"))
@@ -116,15 +123,34 @@ public class MCUnity : MonoBehaviour
 
         // GUI.Box(new Rect(0, 4 * Style.fontSize, Screen.width, Style.fontSize), Display_Buffer, Style);
 
-        // Generate GUI controls for the "int" type variables
+        int tile_height = Style.fontSize * 4;
+        int tile_width = Screen.width / 2;
+        int tile_xpos = 0;
+        int tile_ypos = line;
         int k;
-        for (k = 0; k < int_variable_occupancy; k++)
+
+        // generate GUI "tiles" for each "int" type variable
+        for (k = 0; k < int_variable_occupancy; k++ , tile_ypos += tile_height)
         {
-            GUI.Box(new Rect(0, line, Screen.width, Style.fontSize), int_variable_name[k], Style);
-            line += Style.fontSize;
-            GUI.Box(new Rect(0, line, Screen.width, Style.fontSize), int_variable_value[k].ToString(), Style);
-            line += Style.fontSize * 2;
+            // create GUI box (tile) for the variable
+            GUI.Box(new Rect(tile_xpos, tile_ypos, tile_width, tile_height), int_variable_name[k], Style);
+            // display the variable's current value
+            GUI.Label(new Rect(tile_xpos, tile_ypos + Style.fontSize, tile_width, Style.fontSize), int_variable_value[k].ToString(), Style);
+            // add a user input field
+            int_user_input[k] = GUI.TextField(new Rect(tile_xpos, tile_ypos + (2 * Style.fontSize), tile_width / 2, Style.fontSize * 2), int_user_input[k]);
+            // add a button to set the variable
+            if (GUI.Button(new Rect(tile_xpos + (tile_width / 2), tile_ypos + (2 * Style.fontSize), tile_width / 2, Style.fontSize * 2), "Set"))
+                set_int(k);
         }
+
+        // generate GUI "tiles" for each firmware function that can be called from the GUI
+        tile_height = Style.fontSize * 2;
+        for (k = 0; k < firmware_function_occupancy; k++, tile_ypos += tile_height)
+        {
+            if (GUI.Button(new Rect(tile_xpos, tile_ypos + tile_height, tile_width, tile_height), firmware_function_name[k]))
+                firmware_function_call(k);
+        }
+
     }
 
     /*********************************************************************************************************
@@ -153,6 +179,19 @@ public class MCUnity : MonoBehaviour
         }
     }
 
+    // UNITY_RX_FORCE_SETUP - Request the MCU perform its MCUnity setup operations sequence again
+    private void force_setup()
+    {
+        // Reset local storate of GUI setup
+        int_variables_init();
+        firmware_function_init();
+
+        // Create the operation's packet
+        byte[] payload = new byte[1];   // packet only contains a command byte
+        payload[0] = 0x02;              // UNITY_RX_FORCE_SETUP
+        UDP_Socket.Send(payload, payload.Length, MCU_IP_Addr, My_Port);
+    }
+
     /*********************************************************************************************************
     PACKET RECEIVER THREAD - CALLS INDIVIDUAL PARSERS
 
@@ -178,6 +217,9 @@ public class MCUnity : MonoBehaviour
                 // We've got a packet payload form the ESP8266 in the "data" array : call the relevant parser by type
                 switch (data[0])
                 {
+                    case 0x00:          // UNITY_TX_SETUP_FUNCTION : setup a firmware function GUI element
+                        parse_setup_function(data);
+                        break;
                     case 0x04:          // UNITY_TX_SETUP_INT : setup GUI element for an "int" type variable (32-bit signed)
                         parse_setup_int(data);
                         break;
@@ -204,6 +246,7 @@ public class MCUnity : MonoBehaviour
     private int[] int_variable_max_val;
     private uint[] int_variable_flags;
     private string[] int_variable_name;
+    private string[] int_user_input;        // to be used by the GUI
     private int int_variable_occupancy;      // how many "int" variables have been setup ?
 
     private void int_variables_init()
@@ -213,6 +256,7 @@ public class MCUnity : MonoBehaviour
         int_variable_max_val = new int[256];
         int_variable_flags = new uint[256];
         int_variable_name = new string[256];
+        int_user_input = new string[256];
         int_variable_occupancy = 0;     // note : zeroing this value amounts to clearing int variable storage
     }
 
@@ -239,6 +283,9 @@ public class MCUnity : MonoBehaviour
 
         // store it as the variable's display name
         int_variable_name[int_variable_occupancy] = Encoding.UTF8.GetString(str);   // convert the variable length part into a string
+
+        // initialize user input field
+        int_user_input[int_variable_occupancy] = "";
 
         // Build a log string
         string text = "setup int " + data[1]; // data[1] is the common index the ESP8266 and Unity will share to identify the same variable without using its name    
@@ -275,6 +322,84 @@ public class MCUnity : MonoBehaviour
         }
         // log
         print(log);
+    }
+
+    // UNITY_RX_SET_INT - Remotely set one of the "int" variables
+    private void set_int (int index)
+    {
+        // Create the operation's packet
+        byte[] payload = new byte[6];   // packet is 6 bytes long : command byte, variable's index byte, variable's value (32-bit)
+        payload[0] = 0x05;              // UNITY_RX_SET_INT
+        payload[1] = (byte) index;
+ 
+        int value;
+        if (int.TryParse(int_user_input[index], out value))  // Convert the value from string to integer
+        { // successful parsing
+            payload[2] = (byte)((value >> 24) & 0xFF);       // Value's MSB
+            payload[3] = (byte)((value >> 16) & 0xFF);
+            payload[4] = (byte)((value >> 8) & 0xFF);
+            payload[5] = (byte)(value & 0xFF);               // Value's LSB
+                                                             // Send the packet to the MCU
+            UDP_Socket.Send(payload, payload.Length, MCU_IP_Addr, My_Port);
+        }
+    }
+
+    // UNITY_RX_REQUEST_INT - Request the firmware perform UNITY_TX_UPDATE_INT
+    private void request_int()
+    {
+        byte[] payload = new byte[1];   // packet is just one byte (command byte)
+        payload[0] = 0x07;              // UNITY_RX_REQUEST_INT
+
+        UDP_Socket.Send(payload, payload.Length, MCU_IP_Addr, My_Port);
+    }
+
+
+    /*********************************************************************************************************
+    FIRMWARE FUNCTIONS OPERATIONS AND RELATED CODE
+
+    **********************************************************************************************************/
+
+    private string[] firmware_function_name;
+    private int firmware_function_occupancy;      // how many firmware functions have been setup ?
+
+    private void firmware_function_init()
+    {
+        firmware_function_name = new string[10];    // maximum 10 remote functions
+        firmware_function_occupancy = 0;     // note : zeroing this value amounts to clearing firmware function storage
+    }
+
+    // UNITY_TX_SETUP_FUNCTION - register a firmware function so that it can called from the GUI
+    private void parse_setup_function(byte[] data)
+    {
+        // note : the MCU transmits the index, but in reality this is redundant
+
+        // extract the variable-length part at the end of a packet 
+        byte[] str = new byte[data.Length - 2];     // function's "display name" starts at data[2]
+        int i = 2;
+        while (i < data.Length)
+        {
+            str[i - 2] = data[i];
+            i++;
+        }
+
+        // store it as the variable's display name
+        firmware_function_name[firmware_function_occupancy] = Encoding.UTF8.GetString(str);   // convert the variable length part into a string
+
+        // log
+        print("setup firmware function " + firmware_function_occupancy +  " : \"" + firmware_function_name[firmware_function_occupancy] + "\"");
+
+        // update "occupancy" (max. index)
+        firmware_function_occupancy++;
+    }
+
+    // UNITY_RX_CALL_FUNCTION - request a call to a firmware function
+    private void firmware_function_call(int index)
+    {
+        // Create the operation's packet
+        byte[] payload = new byte[2];   // packet is 2 bytes long : command byte, firmware function's index byte
+        payload[0] = 0x03;              // UNITY_RX_CALL_FUNCTION
+        payload[1] = (byte)index;
+        UDP_Socket.Send(payload, payload.Length, MCU_IP_Addr, My_Port);
     }
 
 }
