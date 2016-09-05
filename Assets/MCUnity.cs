@@ -30,12 +30,64 @@ using System.Threading;		// for creating threads to handle network packets in re
 using System.Text;          // for the abstract "Encoding" class, used to convert between bytes and characters
 using UnityEngine;          // for obvious reasons
 
+/*********************************************************************************************************
+ GUI Tiles Storage
 
+ **********************************************************************************************************/
+
+[System.Serializable]       // no idea why, but this is required. Found at : http://forum.unity3d.com/threads/c-custom-class-display-in-inspector.89865/
+public class GUI_tile
+{
+    // Tile display name sent by the MCU
+    public string name;
+    // Type of firmware variable linked to this tile
+    public int t;
+    // Firmware index for the variable linked to this tile
+    public int i;
+    // GUI flags send by the MCU
+    public int x;
+    public int y;
+    public int w;
+    public int h;
+    public int c1;
+    public int c2;
+    public int reserved;
+
+    public GUI_tile()
+    {
+        // name = new string("empty".ToCharArray());
+        name = "empty";
+
+        t = i = x = y = w = h = c1 = c2 = reserved = 0;
+
+    }
+
+    public void parse(uint flags)
+    {
+        x = (int)((flags & 0xF0000000) >> 28);
+        y = (int)((flags & 0x0F000000) >> 24);
+        w = (int)((flags & 0x00F00000) >> 20);
+        h = (int)((flags & 0x000F0000) >> 16);
+        c1 = (int)((flags & 0x0000F000) >> 12);
+        c2 = (int)((flags & 0x00000F00) >> 8);
+        reserved = (int)(flags & 0x000000FF);
+    }
+}
 
 public class MCUnity : MonoBehaviour
 {
+
+
+    // Tile storage (make private after debugging)
+    public GUI_tile[] tile;    // array of tiles (should be 256 elements per MCU)
+    public int tiles;          // how many tiles are in use
+
+    // "constant" elements of the GUI
+    private GUI_tile tile_setup_request;
+
     public GUIStyle Style = new GUIStyle();     // the display style for Unity IMGUI methods
-    public string Display_Buffer;               // a text buffer, to be displayed using IMGUI
+
+    
 
     Thread Broadcast_Thread;            // this thread will advertise this machine's presence to any MCU listening
     Thread Receive_Thread;	            // this thread will poll for incoming replies from the network
@@ -63,7 +115,7 @@ public class MCUnity : MonoBehaviour
     // Initialize the script and start the networking threads
     void Start()
     {
-        Style.fontSize = 16;                // arbitrary character size. I'm near-sighted. Don't judge me.
+        Style.fontSize = 10;                // arbitrary character size.
 
         UDP_Socket = new UdpClient(My_Port);             // allocate the UDP socket and bind it to port 55555
 
@@ -81,8 +133,17 @@ public class MCUnity : MonoBehaviour
         MCU_IP_Addr = "";
 
         // Initialize remote variables storage
+        tile = new GUI_tile[256];
+        //tiles = 0;
         int_variables_init();
         firmware_function_init();
+
+        // Create fixed elements of the GUI
+        // doesn't execute for some reason...
+        //tile[tiles].name = "Setup";
+        //tile[tiles].t = 255;
+        //tile[tiles].parse(0xDE320F00);       // 3 x 2 tile at the bottom right corner of the display
+        tiles = 1;
 
         // this thread will run at very low speed, to do one broadcast every 100 ms
         Broadcast_Thread = new Thread(new ThreadStart(Broadcaster));
@@ -95,6 +156,7 @@ public class MCUnity : MonoBehaviour
         Receive_Thread.Start();
     }
 
+
     /*********************************************************************************************************
     GUI
 
@@ -105,52 +167,56 @@ public class MCUnity : MonoBehaviour
 
     **********************************************************************************************************/
 
-    // Display the local IP address, the list of all machines on the LAN that run this application, and a refresh button
+    // New tile-oriented GUI design
     void OnGUI()
+    // void OnGUI_new ()
     {
-        int line = 0;
+        // Set the "request setup" tile as the bottom right tile
+        // note : appears to execute before initialization had a change to allocate.
 
-        GUI.Box(new Rect(0, line, Screen.width / 2, Style.fontSize), "MCU IP : " + MCU_IP_Addr, Style);
+        // not sure why this needs to be done here.
+        tile[0].name = "Setup";
+        tile[0].t = 255;
+        tile[0].parse(0xDE320F00);       // 3 x 2 tile at the bottom right corner of the display
 
-        // button to request the MCU perform its MCUnity setup operations sequence again
-        if (GUI.Button(new Rect(Screen.width / 2, line, Screen.width / 2, Style.fontSize), "Force Setup"))
-            force_setup();
+        int x, y, w, h;
 
-        line += Style.fontSize * 2;
+        int ls = Style.fontSize;    // line spacing
 
-        //if (GUI.Button(new Rect(0, 2 * Style.fontSize, Screen.width, Style.fontSize * 2), "Refresh"))
-        //    Display_Buffer = "";        // refresh simply empties the display buffer
-
-        // GUI.Box(new Rect(0, 4 * Style.fontSize, Screen.width, Style.fontSize), Display_Buffer, Style);
-
-        int tile_height = Style.fontSize * 4;
-        int tile_width = Screen.width / 2;
-        int tile_xpos = 0;
-        int tile_ypos = line;
         int k;
-
-        // generate GUI "tiles" for each "int" type variable
-        for (k = 0; k < int_variable_occupancy; k++ , tile_ypos += tile_height)
+        for (k=0;k < tiles;k++)        // "<=" to include the "request setup" button tile
         {
-            // create GUI box (tile) for the variable
-            GUI.Box(new Rect(tile_xpos, tile_ypos, tile_width, tile_height), int_variable_name[k], Style);
-            // display the variable's current value
-            GUI.Label(new Rect(tile_xpos, tile_ypos + Style.fontSize, tile_width, Style.fontSize), int_variable_value[k].ToString(), Style);
-            // add a user input field
-            int_user_input[k] = GUI.TextField(new Rect(tile_xpos, tile_ypos + (2 * Style.fontSize), tile_width / 2, Style.fontSize * 2), int_user_input[k]);
-            // add a button to set the variable
-            if (GUI.Button(new Rect(tile_xpos + (tile_width / 2), tile_ypos + (2 * Style.fontSize), tile_width / 2, Style.fontSize * 2), "Set"))
-                set_int(k);
-        }
+            // code common to all tiles
+            x = (Screen.width / 16) * tile[k].x;
+            y = (Screen.height / 16) * tile[k].y;
+            w = (Screen.width / 16) * tile[k].w;
+            h = (Screen.height / 16) * tile[k].h;
 
-        // generate GUI "tiles" for each firmware function that can be called from the GUI
-        tile_height = Style.fontSize * 2;
-        for (k = 0; k < firmware_function_occupancy; k++, tile_ypos += tile_height)
-        {
-            if (GUI.Button(new Rect(tile_xpos, tile_ypos + tile_height, tile_width, tile_height), firmware_function_name[k]))
-                firmware_function_call(k);
+            switch (tile[k].t)      // perform a different action for each tile type
+            {
+                case 0:             // tile is "firmware function" : instantiate a button to call it
+                    if (GUI.Button(new Rect(x, y, w, h), tile[k].name))
+                        firmware_function_call(tile[k].i);
+                    break;
+                case 1:             // tile is an "int" variable
+                    // create GUI box (tile) for the variable
+                    GUI.Box(new Rect(x, y, w, h), tile[k].name, Style);
+                    // display the variable's current value
+                    GUI.Label(new Rect(x, y + ls, w, ls), int_variable_value[tile[k].i].ToString(), Style);
+                    // add a user input field
+                    int_user_input[tile[k].i] = GUI.TextField(new Rect(x, y + ls * 2, w / 2, ls * 2), int_user_input[tile[k].i]);
+                    // add a button to set the variable
+                    if (GUI.Button(new Rect(x + w / 2, y + ls * 2, w / 2, ls * 2), "Set"))
+                        set_int(tile[k].i);
+                    break;
+                case 255:           // "request setup" button
+                    if (GUI.Button(new Rect(x, y, w, h), tile[k].name))  // force re-setup button
+                        force_setup();
+                    break;
+                default:
+                    break;
+            }
         }
-
     }
 
     /*********************************************************************************************************
@@ -185,6 +251,7 @@ public class MCUnity : MonoBehaviour
         // Reset local storate of GUI setup
         int_variables_init();
         firmware_function_init();
+        tiles = 1;  // clear the tiles array, starting from the first MCU-configured element
 
         // Create the operation's packet
         byte[] payload = new byte[1];   // packet only contains a command byte
@@ -254,8 +321,8 @@ public class MCUnity : MonoBehaviour
         int_variable_value = new int[256];      // maximum 256 remote variables of type int
         int_variable_min_val = new int[256];
         int_variable_max_val = new int[256];
-        int_variable_flags = new uint[256];
-        int_variable_name = new string[256];
+        int_variable_flags = new uint[256];     // moving this to tile[]
+        int_variable_name = new string[256];    // moving this to tile[]
         int_user_input = new string[256];
         int_variable_occupancy = 0;     // note : zeroing this value amounts to clearing int variable storage
     }
@@ -266,11 +333,17 @@ public class MCUnity : MonoBehaviour
         // A setup function first needs to store the parameters sent by the MCU
         // note : the MCU transmits the index, but in reality this is redundant
 
+        // Store the parameters specific to "int" type variables :
         // Converting bytes to int (this matches the endianness of the ESP8266)
         int_variable_value[int_variable_occupancy] = (data[2] << 24) | (data[3] << 16) | (data[4] << 8) | data[5];
         int_variable_min_val[int_variable_occupancy] = (data[6] << 24) | (data[7] << 16) | (data[8] << 8) | data[9];
         int_variable_max_val[int_variable_occupancy] = (data[10] << 24) | (data[11] << 16) | (data[12] << 8) | data[13];
         int_variable_flags[int_variable_occupancy] = (uint)((data[14] << 24) | (data[15] << 16) | (data[16] << 8) | data[17]);
+
+        // Store the parameters common to all types of GUI tiles
+        tile[tiles].t = 1;      // tile is for an "int" type variable
+        tile[tiles].i = int_variable_occupancy;     // index in this variable in the firmware
+        tile[tiles].parse((uint)((data[14] << 24) | (data[15] << 16) | (data[16] << 8) | data[17])); // parse the GUI flags
 
         // extract the variable-length part at the end of a packet 
         byte[] str = new byte[data.Length - 18];
@@ -282,7 +355,8 @@ public class MCUnity : MonoBehaviour
         }
 
         // store it as the variable's display name
-        int_variable_name[int_variable_occupancy] = Encoding.UTF8.GetString(str);   // convert the variable length part into a string
+        int_variable_name[int_variable_occupancy] = Encoding.UTF8.GetString(str);
+        tile[tiles].name = Encoding.UTF8.GetString(str); // convert the variable length part into a string
 
         // initialize user input field
         int_user_input[int_variable_occupancy] = "";
@@ -299,6 +373,7 @@ public class MCUnity : MonoBehaviour
 
         // update "occupancy" (max. index)
         int_variable_occupancy++;
+        tiles++;
     }
 
     // UNITY_TX_UPDATE_INT
@@ -360,11 +435,13 @@ public class MCUnity : MonoBehaviour
     **********************************************************************************************************/
 
     private string[] firmware_function_name;
+    private int[] firmware_function_flags;
     private int firmware_function_occupancy;      // how many firmware functions have been setup ?
 
     private void firmware_function_init()
     {
         firmware_function_name = new string[10];    // maximum 10 remote functions
+        firmware_function_flags = new int[10];
         firmware_function_occupancy = 0;     // note : zeroing this value amounts to clearing firmware function storage
     }
 
@@ -373,23 +450,35 @@ public class MCUnity : MonoBehaviour
     {
         // note : the MCU transmits the index, but in reality this is redundant
 
+        // to do : test array capacity before going any further
+
+        // tile initialization
+        tile[tiles].i = firmware_function_occupancy;
+        tile[tiles].t = 0;      // "firmware function" tiles are type 0.
+
+        // extract the flags
+        firmware_function_flags[firmware_function_occupancy] = (data[2] << 24) | (data[3] << 16) | (data[4] << 8) | data[5];
+        tile[tiles].parse((uint)((data[2] << 24) | (data[3] << 16) | (data[4] << 8) | data[5]));
+
         // extract the variable-length part at the end of a packet 
-        byte[] str = new byte[data.Length - 2];     // function's "display name" starts at data[2]
-        int i = 2;
+        byte[] str = new byte[data.Length - 6];     // function's "display name" starts at data[6]
+        int i = 6;
         while (i < data.Length)
         {
-            str[i - 2] = data[i];
+            str[i - 6] = data[i];
             i++;
         }
 
         // store it as the variable's display name
-        firmware_function_name[firmware_function_occupancy] = Encoding.UTF8.GetString(str);   // convert the variable length part into a string
+        firmware_function_name[firmware_function_occupancy] = Encoding.UTF8.GetString(str);
+        tile[tiles].name = Encoding.UTF8.GetString(str);  // convert the variable length part into a string
 
         // log
-        print("setup firmware function " + firmware_function_occupancy +  " : \"" + firmware_function_name[firmware_function_occupancy] + "\"");
+        print("setup firmware function " + firmware_function_occupancy +  " : \"" + firmware_function_name[firmware_function_occupancy] + "\" with flags " + firmware_function_flags[firmware_function_occupancy]);
 
         // update "occupancy" (max. index)
         firmware_function_occupancy++;
+        tiles++;
     }
 
     // UNITY_RX_CALL_FUNCTION - request a call to a firmware function
@@ -403,4 +492,8 @@ public class MCUnity : MonoBehaviour
     }
 
 }
+
+
+
+
 
