@@ -14,13 +14,157 @@ Platform assembly: C:\JRO\Projects\0008\Unity\MCUnity\MCUnity_x64_Data\Managed\U
 Loading C:\JRO\Projects\0008\Unity\MCUnity\MCUnity_x64_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
 Platform assembly: C:\JRO\Projects\0008\Unity\MCUnity\MCUnity_x64_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
 Loading C:\JRO\Projects\0008\Unity\MCUnity\MCUnity_x64_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
-- Completed reload, in  0.073 seconds
+- Completed reload, in  0.072 seconds
 Platform assembly: C:\JRO\Projects\0008\Unity\MCUnity\MCUnity_x64_Data\Managed\System.Core.dll (this message is harmless)
 Platform assembly: C:\JRO\Projects\0008\Unity\MCUnity\MCUnity_x64_Data\Managed\System.dll (this message is harmless)
 desktop: 2736x1824 60Hz; virtual: 2736x1824 at 0,0
 <RI> Initializing input.
 <RI> Input initialized.
 <RI> Initialized touch support.
-UnloadTime: 1.268405 ms
+UnloadTime: 0.971594 ms
+setup int 0 / 305419896 / 0 / 1000 / A variable
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+setup int 1 / 12 / 0 / 1023 / ADC sample
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+setup int 2 / -120 / -300 / 300 / Test Value
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+setup firmware function 0 : "Increment"
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+setup int 3 / 1 / 0 / 1 / LED State
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+setup firmware function 1 : "Toggle LED"
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  6  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  12  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  7  -120  1  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -120  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -120  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -119  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -119  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -119  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -119  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -119  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  13  -119  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
+update (int) from offset 0 : 305419896  14  -119  0  
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/UnityEngineDebugBindings.gen.cpp Line: 37)
+
 Setting up 1 worker threads for Enlighten.
-  Thread -> id: 4350 -> priority: 1 
+  Thread -> id: 1f28 -> priority: 1 
